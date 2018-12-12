@@ -28,6 +28,7 @@ import { EventsAccumulator } from '../util/events_accumulator';
 import firebase from '../util/firebase_export';
 import {
   apiDescribe,
+  USE_EMULATOR,
   withTestCollection,
   withTestDb,
   withTestDbs,
@@ -140,53 +141,61 @@ apiDescribe('Database', persistence => {
     });
   });
 
-  it('can merge data with an existing document using set', () => {
-    return withTestDoc(persistence, doc => {
-      const initialData = {
-        desc: 'description',
-        'owner.data': { name: 'Jonny', email: 'abc@xyz.com' }
-      };
-      const mergeData = {
-        updated: true,
-        'owner.data': { name: 'Sebastian' }
-      };
-      const finalData = {
-        updated: true,
-        desc: 'description',
-        'owner.data': { name: 'Sebastian', email: 'abc@xyz.com' }
-      };
-      return doc
-        .set(initialData)
-        .then(() => doc.set(mergeData, { merge: true }))
-        .then(() => doc.get())
-        .then(docSnapshot => {
-          expect(docSnapshot.exists).to.be.ok;
-          expect(docSnapshot.data()).to.deep.equal(finalData);
-        });
-    });
-  });
+  (!persistence && USE_EMULATOR ? it.skip : it)(
+    'can merge data with an existing document using set',
+    () => {
+      return withTestDoc(persistence, doc => {
+        const initialData = {
+          desc: 'description',
+          'owner.data': { name: 'Jonny', email: 'abc@xyz.com' }
+        };
+        const mergeData = {
+          updated: true,
+          'owner.data': { name: 'Sebastian' }
+        };
+        const finalData = {
+          updated: true,
+          desc: 'description',
+          'owner.data': { name: 'Sebastian', email: 'abc@xyz.com' }
+        };
+        return doc
+          .set(initialData)
+          .then(() => doc.set(mergeData, { merge: true }))
+          .then(() => doc.get())
+          .then(docSnapshot => {
+            expect(docSnapshot.exists).to.be.ok;
+            expect(docSnapshot.data()).to.deep.equal(finalData);
+          });
+      });
+    }
+  );
 
-  it('can merge server timestamps', () => {
-    return withTestDoc(persistence, doc => {
-      const initialData = {
-        updated: false
-      };
-      const mergeData = {
-        time: FieldValue.serverTimestamp(),
-        nested: { time: FieldValue.serverTimestamp() }
-      };
-      return doc
-        .set(initialData)
-        .then(() => doc.set(mergeData, { merge: true }))
-        .then(() => doc.get())
-        .then(docSnapshot => {
-          expect(docSnapshot.exists).to.be.ok;
-          expect(docSnapshot.get('updated')).to.be.false;
-          expect(docSnapshot.get('time')).to.be.an.instanceof(Timestamp);
-          expect(docSnapshot.get('nested.time')).to.be.an.instanceof(Timestamp);
-        });
-    });
-  });
+  (!persistence && USE_EMULATOR ? it.skip : it)(
+    'can merge server timestamps',
+    () => {
+      return withTestDoc(persistence, doc => {
+        const initialData = {
+          updated: false
+        };
+        const mergeData = {
+          time: FieldValue.serverTimestamp(),
+          nested: { time: FieldValue.serverTimestamp() }
+        };
+        return doc
+          .set(initialData)
+          .then(() => doc.set(mergeData, { merge: true }))
+          .then(() => doc.get())
+          .then(docSnapshot => {
+            expect(docSnapshot.exists).to.be.ok;
+            expect(docSnapshot.get('updated')).to.be.false;
+            expect(docSnapshot.get('time')).to.be.an.instanceof(Timestamp);
+            expect(docSnapshot.get('nested.time')).to.be.an.instanceof(
+              Timestamp
+            );
+          });
+      });
+    }
+  );
 
   it('can merge empty object', async () => {
     await withTestDoc(persistence, async doc => {
@@ -276,32 +285,35 @@ apiDescribe('Database', persistence => {
     });
   });
 
-  it('can set server timestamps using mergeFields', () => {
-    return withTestDoc(persistence, doc => {
-      const initialData = {
-        untouched: true,
-        foo: 'bar',
-        nested: { untouched: true, foo: 'bar' }
-      };
-      const mergeData = {
-        foo: FieldValue.serverTimestamp(),
-        inner: { foo: FieldValue.serverTimestamp() },
-        nested: { foo: FieldValue.serverTimestamp() }
-      };
-      return doc
-        .set(initialData)
-        .then(() =>
-          doc.set(mergeData, { mergeFields: ['foo', 'inner', 'nested.foo'] })
-        )
-        .then(() => doc.get())
-        .then(docSnapshot => {
-          expect(docSnapshot.exists).to.be.ok;
-          expect(docSnapshot.get('foo')).to.be.instanceof(Timestamp);
-          expect(docSnapshot.get('inner.foo')).to.be.instanceof(Timestamp);
-          expect(docSnapshot.get('nested.foo')).to.be.instanceof(Timestamp);
-        });
-    });
-  });
+  (!persistence && USE_EMULATOR ? it.skip : it)(
+    'can set server timestamps using mergeFields',
+    () => {
+      return withTestDoc(persistence, doc => {
+        const initialData = {
+          untouched: true,
+          foo: 'bar',
+          nested: { untouched: true, foo: 'bar' }
+        };
+        const mergeData = {
+          foo: FieldValue.serverTimestamp(),
+          inner: { foo: FieldValue.serverTimestamp() },
+          nested: { foo: FieldValue.serverTimestamp() }
+        };
+        return doc
+          .set(initialData)
+          .then(() =>
+            doc.set(mergeData, { mergeFields: ['foo', 'inner', 'nested.foo'] })
+          )
+          .then(() => doc.get())
+          .then(docSnapshot => {
+            expect(docSnapshot.exists).to.be.ok;
+            expect(docSnapshot.get('foo')).to.be.instanceof(Timestamp);
+            expect(docSnapshot.get('inner.foo')).to.be.instanceof(Timestamp);
+            expect(docSnapshot.get('nested.foo')).to.be.instanceof(Timestamp);
+          });
+      });
+    }
+  );
 
   it('can replace an array by merging using set', () => {
     return withTestDoc(persistence, doc => {
@@ -480,32 +492,40 @@ apiDescribe('Database', persistence => {
     });
   });
 
-  it('can update nested fields', () => {
-    const FieldPath = firebase.firestore!.FieldPath;
+  (!persistence && USE_EMULATOR ? it.skip : it)(
+    'can update nested fields',
+    () => {
+      const FieldPath = firebase.firestore!.FieldPath;
 
-    return withTestDoc(persistence, doc => {
-      const initialData = {
-        desc: 'Description',
-        owner: { name: 'Jonny' },
-        'is.admin': false
-      };
-      const finalData = {
-        desc: 'Description',
-        owner: { name: 'Sebastian' },
-        'is.admin': true
-      };
-      return doc
-        .set(initialData)
-        .then(() =>
-          doc.update('owner.name', 'Sebastian', new FieldPath('is.admin'), true)
-        )
-        .then(() => doc.get())
-        .then(docSnapshot => {
-          expect(docSnapshot.exists).to.be.ok;
-          expect(docSnapshot.data()).to.deep.equal(finalData);
-        });
-    });
-  });
+      return withTestDoc(persistence, doc => {
+        const initialData = {
+          desc: 'Description',
+          owner: { name: 'Jonny' },
+          'is.admin': false
+        };
+        const finalData = {
+          desc: 'Description',
+          owner: { name: 'Sebastian' },
+          'is.admin': true
+        };
+        return doc
+          .set(initialData)
+          .then(() =>
+            doc.update(
+              'owner.name',
+              'Sebastian',
+              new FieldPath('is.admin'),
+              true
+            )
+          )
+          .then(() => doc.get())
+          .then(docSnapshot => {
+            expect(docSnapshot.exists).to.be.ok;
+            expect(docSnapshot.data()).to.deep.equal(finalData);
+          });
+      });
+    }
+  );
 
   describe('documents: ', () => {
     const invalidDocValues = [undefined, null, 0, 'foo', ['a'], new Date()];

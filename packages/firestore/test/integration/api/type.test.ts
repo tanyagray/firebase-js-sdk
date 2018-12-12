@@ -18,7 +18,12 @@ import * as firestore from '@firebase/firestore-types';
 import { expect } from 'chai';
 import { addEqualityMatcher } from '../../util/equality_matcher';
 import firebase from '../util/firebase_export';
-import { apiDescribe, withTestDb, withTestDoc } from '../util/helpers';
+import {
+  apiDescribe,
+  USE_EMULATOR,
+  withTestDb,
+  withTestDoc
+} from '../util/helpers';
 
 apiDescribe('Firestore', persistence => {
   addEqualityMatcher();
@@ -42,11 +47,14 @@ apiDescribe('Firestore', persistence => {
     });
   });
 
-  it('can read and write array fields', () => {
-    return withTestDb(persistence, db => {
-      return expectRoundtrip(db, { array: [1, 'foo', { deep: true }, null] });
-    });
-  });
+  (!persistence && USE_EMULATOR ? it.skip : it)(
+    'can read and write array fields',
+    () => {
+      return withTestDb(persistence, db => {
+        return expectRoundtrip(db, { array: [1, 'foo', { deep: true }, null] });
+      });
+    }
+  );
 
   it('can read and write geo point fields', () => {
     return withTestDoc(persistence, doc => {

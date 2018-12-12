@@ -20,6 +20,7 @@ import { Deferred } from '../../util/promise';
 import firebase from '../util/firebase_export';
 import * as integrationHelpers from '../util/helpers';
 
+const USE_EMULATOR = integrationHelpers.USE_EMULATOR;
 const apiDescribe = integrationHelpers.apiDescribe;
 
 apiDescribe('Database transactions', persistence => {
@@ -224,152 +225,161 @@ apiDescribe('Database transactions', persistence => {
     });
   });
 
-  it('increment transactionally', () => {
-    // A set of concurrent transactions.
-    const transactionPromises: Array<Promise<void>> = [];
-    const readPromises: Array<Promise<void>> = [];
-    // A barrier to make sure every transaction reaches the same spot.
-    const barrier = new Deferred();
-    let started = 0;
+  (!persistence && USE_EMULATOR ? it.skip : it)(
+    'increment transactionally',
+    () => {
+      // A set of concurrent transactions.
+      const transactionPromises: Array<Promise<void>> = [];
+      const readPromises: Array<Promise<void>> = [];
+      // A barrier to make sure every transaction reaches the same spot.
+      const barrier = new Deferred();
+      let started = 0;
 
-    return integrationHelpers.withTestDb(persistence, db => {
-      const doc = db.collection('counters').doc();
-      return doc
-        .set({
-          count: 5
-        })
-        .then(() => {
-          // Make 3 transactions that will all increment.
-          for (let i = 0; i < 3; i++) {
-            const resolveRead = new Deferred<void>();
-            readPromises.push(resolveRead.promise);
-            transactionPromises.push(
-              db.runTransaction(transaction => {
-                return transaction.get(doc).then(snapshot => {
-                  expect(snapshot).to.exist;
-                  started = started + 1;
-                  resolveRead.resolve();
-                  return barrier.promise.then(() => {
-                    transaction.set(doc, {
-                      count: snapshot.data()!['count'] + 1
+      return integrationHelpers.withTestDb(persistence, db => {
+        const doc = db.collection('counters').doc();
+        return doc
+          .set({
+            count: 5
+          })
+          .then(() => {
+            // Make 3 transactions that will all increment.
+            for (let i = 0; i < 3; i++) {
+              const resolveRead = new Deferred<void>();
+              readPromises.push(resolveRead.promise);
+              transactionPromises.push(
+                db.runTransaction(transaction => {
+                  return transaction.get(doc).then(snapshot => {
+                    expect(snapshot).to.exist;
+                    started = started + 1;
+                    resolveRead.resolve();
+                    return barrier.promise.then(() => {
+                      transaction.set(doc, {
+                        count: snapshot.data()!['count'] + 1
+                      });
                     });
                   });
-                });
-              })
-            );
-          }
+                })
+              );
+            }
 
-          // Let all of the transactions fetch the old value and stop once.
-          return Promise.all(readPromises);
-        })
-        .then(() => {
-          // Let all of the transactions continue and wait for them to
-          // finish.
-          expect(started).to.equal(3);
-          barrier.resolve();
-          return Promise.all(transactionPromises);
-        })
-        .then(() => {
-          // Now all transaction should be completed, so check the result.
-          return doc.get();
-        })
-        .then(snapshot => {
-          expect(snapshot).to.exist;
-          expect(snapshot.data()!['count']).to.equal(8);
-        });
-    });
-  });
+            // Let all of the transactions fetch the old value and stop once.
+            return Promise.all(readPromises);
+          })
+          .then(() => {
+            // Let all of the transactions continue and wait for them to
+            // finish.
+            expect(started).to.equal(3);
+            barrier.resolve();
+            return Promise.all(transactionPromises);
+          })
+          .then(() => {
+            // Now all transaction should be completed, so check the result.
+            return doc.get();
+          })
+          .then(snapshot => {
+            expect(snapshot).to.exist;
+            expect(snapshot.data()!['count']).to.equal(8);
+          });
+      });
+    }
+  );
 
-  it('update transactionally', () => {
-    // A set of concurrent transactions.
-    const transactionPromises: Array<Promise<void>> = [];
-    const readPromises: Array<Promise<void>> = [];
-    // A barrier to make sure every transaction reaches the same spot.
-    const barrier = new Deferred();
-    let started = 0;
+  (!persistence && USE_EMULATOR ? it.skip : it)(
+    'update transactionally',
+    () => {
+      // A set of concurrent transactions.
+      const transactionPromises: Array<Promise<void>> = [];
+      const readPromises: Array<Promise<void>> = [];
+      // A barrier to make sure every transaction reaches the same spot.
+      const barrier = new Deferred();
+      let started = 0;
 
-    return integrationHelpers.withTestDb(persistence, db => {
-      const doc = db.collection('counters').doc();
-      return doc
-        .set({
-          count: 5,
-          other: 'yes'
-        })
-        .then(() => {
-          // Make 3 transactions that will all increment.
-          for (let i = 0; i < 3; i++) {
-            const resolveRead = new Deferred<void>();
-            readPromises.push(resolveRead.promise);
-            transactionPromises.push(
-              db.runTransaction(transaction => {
-                return transaction.get(doc).then(snapshot => {
-                  expect(snapshot).to.exist;
-                  started = started + 1;
-                  resolveRead.resolve();
-                  return barrier.promise.then(() => {
-                    transaction.update(doc, {
-                      count: snapshot.data()!['count'] + 1
+      return integrationHelpers.withTestDb(persistence, db => {
+        const doc = db.collection('counters').doc();
+        return doc
+          .set({
+            count: 5,
+            other: 'yes'
+          })
+          .then(() => {
+            // Make 3 transactions that will all increment.
+            for (let i = 0; i < 3; i++) {
+              const resolveRead = new Deferred<void>();
+              readPromises.push(resolveRead.promise);
+              transactionPromises.push(
+                db.runTransaction(transaction => {
+                  return transaction.get(doc).then(snapshot => {
+                    expect(snapshot).to.exist;
+                    started = started + 1;
+                    resolveRead.resolve();
+                    return barrier.promise.then(() => {
+                      transaction.update(doc, {
+                        count: snapshot.data()!['count'] + 1
+                      });
                     });
                   });
-                });
-              })
+                })
+              );
+            }
+
+            // Let all of the transactions fetch the old value and stop once.
+            return Promise.all(readPromises);
+          })
+          .then(() => {
+            // Let all of the transactions continue and wait for them to
+            // finish.
+            expect(started).to.equal(3);
+            barrier.resolve();
+            return Promise.all(transactionPromises);
+          })
+          .then(() => {
+            // Now all transaction should be completed, so check the result.
+            return doc.get();
+          })
+          .then(snapshot => {
+            expect(snapshot).to.exist;
+            expect(snapshot.data()!['count']).to.equal(8);
+            expect(snapshot.data()!['other']).to.equal('yes');
+          });
+      });
+    }
+  );
+
+  (!persistence && USE_EMULATOR ? it.skip : it)(
+    'can update nested fields transactionally',
+    () => {
+      const initialData = {
+        desc: 'Description',
+        owner: { name: 'Jonny' },
+        'is.admin': false
+      };
+      const finalData = {
+        desc: 'Description',
+        owner: { name: 'Sebastian' },
+        'is.admin': true
+      };
+
+      return integrationHelpers.withTestDb(persistence, db => {
+        const doc = db.collection('counters').doc();
+        return db
+          .runTransaction(async transaction => {
+            transaction.set(doc, initialData);
+            transaction.update(
+              doc,
+              'owner.name',
+              'Sebastian',
+              new firebase.firestore!.FieldPath('is.admin'),
+              true
             );
-          }
-
-          // Let all of the transactions fetch the old value and stop once.
-          return Promise.all(readPromises);
-        })
-        .then(() => {
-          // Let all of the transactions continue and wait for them to
-          // finish.
-          expect(started).to.equal(3);
-          barrier.resolve();
-          return Promise.all(transactionPromises);
-        })
-        .then(() => {
-          // Now all transaction should be completed, so check the result.
-          return doc.get();
-        })
-        .then(snapshot => {
-          expect(snapshot).to.exist;
-          expect(snapshot.data()!['count']).to.equal(8);
-          expect(snapshot.data()!['other']).to.equal('yes');
-        });
-    });
-  });
-
-  it('can update nested fields transactionally', () => {
-    const initialData = {
-      desc: 'Description',
-      owner: { name: 'Jonny' },
-      'is.admin': false
-    };
-    const finalData = {
-      desc: 'Description',
-      owner: { name: 'Sebastian' },
-      'is.admin': true
-    };
-
-    return integrationHelpers.withTestDb(persistence, db => {
-      const doc = db.collection('counters').doc();
-      return db
-        .runTransaction(async transaction => {
-          transaction.set(doc, initialData);
-          transaction.update(
-            doc,
-            'owner.name',
-            'Sebastian',
-            new firebase.firestore!.FieldPath('is.admin'),
-            true
-          );
-        })
-        .then(() => doc.get())
-        .then(docSnapshot => {
-          expect(docSnapshot.exists).to.be.ok;
-          expect(docSnapshot.data()).to.deep.equal(finalData);
-        });
-    });
-  });
+          })
+          .then(() => doc.get())
+          .then(docSnapshot => {
+            expect(docSnapshot.exists).to.be.ok;
+            expect(docSnapshot.data()).to.deep.equal(finalData);
+          });
+      });
+    }
+  );
 
   it('handle reading one doc and writing another', () => {
     return integrationHelpers.withTestDb(persistence, db => {

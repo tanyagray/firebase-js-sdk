@@ -21,6 +21,7 @@ import {
   apiDescribe,
   toDataArray,
   toIds,
+  USE_EMULATOR,
   withTestCollection,
   withTestDb,
   withTestDbs
@@ -30,52 +31,55 @@ const Timestamp = firebase.firestore!.Timestamp;
 const FieldPath = firebase.firestore!.FieldPath;
 
 apiDescribe('Cursors', persistence => {
-  it('can page through items', () => {
-    const testDocs = {
-      a: { v: 'a' },
-      b: { v: 'b' },
-      c: { v: 'c' },
-      d: { v: 'd' },
-      e: { v: 'e' },
-      f: { v: 'f' }
-    };
-    return withTestCollection(persistence, testDocs, coll => {
-      return coll
-        .limit(2)
-        .get()
-        .then(docs => {
-          expect(toDataArray(docs)).to.deep.equal([{ v: 'a' }, { v: 'b' }]);
-          const lastDoc = docs.docs[docs.docs.length - 1];
-          return coll
-            .limit(3)
-            .startAfter(lastDoc)
-            .get();
-        })
-        .then(docs => {
-          expect(toDataArray(docs)).to.deep.equal([
-            { v: 'c' },
-            { v: 'd' },
-            { v: 'e' }
-          ]);
-          const lastDoc = docs.docs[docs.docs.length - 1];
-          return coll
-            .limit(1)
-            .startAfter(lastDoc)
-            .get();
-        })
-        .then(docs => {
-          expect(toDataArray(docs)).to.deep.equal([{ v: 'f' }]);
-          const lastDoc = docs.docs[docs.docs.length - 1];
-          return coll
-            .limit(3)
-            .startAfter(lastDoc)
-            .get();
-        })
-        .then(docs => {
-          expect(toDataArray(docs)).to.deep.equal([]);
-        });
-    });
-  });
+  (!persistence && USE_EMULATOR ? it.skip : it)(
+    'can page through items',
+    () => {
+      const testDocs = {
+        a: { v: 'a' },
+        b: { v: 'b' },
+        c: { v: 'c' },
+        d: { v: 'd' },
+        e: { v: 'e' },
+        f: { v: 'f' }
+      };
+      return withTestCollection(persistence, testDocs, coll => {
+        return coll
+          .limit(2)
+          .get()
+          .then(docs => {
+            expect(toDataArray(docs)).to.deep.equal([{ v: 'a' }, { v: 'b' }]);
+            const lastDoc = docs.docs[docs.docs.length - 1];
+            return coll
+              .limit(3)
+              .startAfter(lastDoc)
+              .get();
+          })
+          .then(docs => {
+            expect(toDataArray(docs)).to.deep.equal([
+              { v: 'c' },
+              { v: 'd' },
+              { v: 'e' }
+            ]);
+            const lastDoc = docs.docs[docs.docs.length - 1];
+            return coll
+              .limit(1)
+              .startAfter(lastDoc)
+              .get();
+          })
+          .then(docs => {
+            expect(toDataArray(docs)).to.deep.equal([{ v: 'f' }]);
+            const lastDoc = docs.docs[docs.docs.length - 1];
+            return coll
+              .limit(3)
+              .startAfter(lastDoc)
+              .get();
+          })
+          .then(docs => {
+            expect(toDataArray(docs)).to.deep.equal([]);
+          });
+      });
+    }
+  );
 
   it('can be created from documents', () => {
     const testDocs = {
